@@ -1,105 +1,111 @@
+#0.2 release notes  - adds multiple ships
+#                   - adds settings to tweak grid size, ship length, ship count
+
+#Settings
+#(adjust these values to your liking)
+grid_size = 10
+ship_min = 2
+ship_max = 5
+num_ships = 3
+num_turns = 10
+
 import random
 # create board and lay out method to display it
 board = []
-for x in range(5):
-    board.append(["O"] * 5)
+for x in range(grid_size):
+    board.append(["O"] * grid_size)
 def print_board(board):
     for row in board:
         print " ".join(row)
 
-# begin game, assign one random cell to be the "ship"
+# begin game
 print "Let's play Battleship!"
 print_board(board)
 
-ship_is_horizontal = True
-
-def get_ship_length():
-    return random.randint(1,3)
-
-ship_length = get_ship_length()
-
-def random_row(board):
-    if ship_is_horizontal == False:
-        return random.randint(0, len(board[0]) -1 - ship_length)
+#determine ship orientation
+ship_is_horizontal = []
+align_ship = []
+while len(align_ship) < num_ships:
+    align_ship.append(random.randint(0,1))
+for i in range(0,num_ships):
+    if align_ship[i] == 1:
+        ship_is_horizontal.append(False)
     else:
-        return random.randint(0, len(board[0]) - 1)
+        ship_is_horizontal.append(True)
 
-def random_col(board):
-    if ship_is_horizontal == True:
-        return random.randint(0, len(board[0]) - 1 - ship_length)
+#determine ship lengths
+ship_length = []
+for i in range(0,num_ships):
+    ship_length.append(random.randint(ship_min,ship_max))
+
+#choose starting point for ship, determine all cells for ship
+ship_coords = []
+for i in range(0,num_ships):
+    #set coords for vertical ship
+    if ship_is_horizontal[i] == False:
+        #determine row
+        ship_row = 1 + random.randint(1, len(board[0]) - 1 - (ship_length[i] - 1))
+        #determine column
+        ship_col = 1 + random.randint(0, len(board[0]) - 1)
+    #set coords for horizontal ship
     else:
-        return random.randint(0, len(board[0]) - 1)
-
-ship_row = random_row(board)
-ship_col = random_col(board)
-
-def get_ship_row_range(board):
-    ship_row_range = []
-    if ship_is_horizontal == False:
-        ship_row_range.append(ship_row + 1)
-        ship_row_range.append(ship_row + ship_length)
+        #determine row
+        ship_row = 1 + random.randint(1, len(board[0]) - 1)
+        #determine column
+        ship_col = 1 + random.randint(0, len(board[0]) - 1 - (ship_length[i] - 1))
+    #determine all coordinate points for ship location
+    single_ship = []
+    if ship_is_horizontal[i] == True:
+        for j in range(0,ship_length[i]):
+            single_ship.append([ship_row,ship_col + j])
     else:
-        ship_row_range.append(ship_row + 1)
-        ship_row_range.append(ship_row + 1)
-    return ship_row_range
-
-def get_ship_col_range(board):
-    ship_col_range = []
-    if ship_is_horizontal == True:
-        ship_col_range.append(ship_col + 1)
-        ship_col_range.append(ship_col + ship_length)
+        for j in range (0,ship_length[i]):
+            single_ship.append([ship_row + j,ship_col])
+    match_found = False
+    for j in range(0,len(single_ship)):
+        if single_ship[j] in ship_coords:
+            match_found == True
+    if match_found == False:
+        ship_coords.extend(single_ship)
     else:
-        ship_col_range.append(ship_col + 1)
-        ship_col_range.append(ship_col + 1)
-    return ship_col_range
+        i = i - 1
 
-ship_row_set = get_ship_row_range(board)
-ship_col_set = get_ship_col_range(board)
-
-# FOR TESTING ONLY, remove these lines before actual play
-print ship_row
-print ship_col
-print "Row: ", ship_row_set[0], " - ", ship_row_set[1]
-print "Col: ", ship_col_set[0], " - ", ship_col_set[1]
+# FOR TESTING ONLY, comment out these lines before actual play
+#for i in range(0,num_ships):
+#    print i, "->", ship_is_horizontal[i], ", ", ship_length[i]
+#print ship_coords
 
 # give user three chances to guess the correct "ship" cell
 turn = 1
+guess_coord = []
 while True:
     print "Turn", turn
-    guess_row = int(raw_input("Guess Row(1-5):"))
-    guess_col = int(raw_input("Guess Col(1-5):"))
+    print "Row/Column Range: 1 -",grid_size
+    guess_row = int(raw_input("Guess Row:"))
+    guess_col = int(raw_input("Guess Col:"))
     # check if row and column guesses match the ship location
-    guess_row_match = False
-    guess_col_match = False
-    if guess_row == ship_row_set[0] or guess_row == ship_row_set[1]:
-        guess_row_match = True
-    elif ship_row_set[0] < guess_row < ship_row_set[1]:
-        guess_row_match = True
-    if guess_col == ship_col_set[0] or guess_col == ship_col_set[1]:
-        guess_col_match = True
-    elif ship_col_set[0] < guess_col < ship_col_set[1]:
-        guess_col_match = True
-    if guess_col_match and guess_row_match:
+    guess_coord = [guess_row, guess_col]
+    if str(guess_coord) in str(ship_coords):
         print "Congratulations! You sunk my battleship!"
+        for i in range(0,len(ship_coords)):
+            # demarcate ship locations and hits, print board
+            board[ship_coords[i][0]-1][ship_coords[i][1]-1] = "*"
+        board[guess_row - 1][guess_col - 1] = "X"
+        print_board(board)
         break
     else:
-        row_range = range(0,5)
+        row_range = range(0,grid_size)
         if guess_row - 1 not in row_range or guess_col - 1 not in row_range:
-             print "Oops, that's not even in the ocean."
+            print "Oops, that's not even in the ocean."
         elif(board[guess_row - 1][guess_col - 1] == "X"):
             print "You guessed that one already."
         else:
             print "You missed my battleship!"
             board[guess_row - 1][guess_col - 1] = "X"
             turn = turn + 1
-        if turn == 4:
+        if turn == num_turns + 1:
             print "Game Over"
             print_board(board)
             break
         else:
             print_board(board)
-
-# Ideas 1 - multiple ships
-# Ideas 2 - different sizes
-# Ideas 3 - two-player game
-# Ideas 4 - rematches, stats
