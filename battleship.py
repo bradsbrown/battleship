@@ -136,19 +136,27 @@ def play_game(ship_coords, grid_size, board):
 # begin game
 def start_game(grid_size, num_ships, ship_min, ship_max, num_turns):
     board = generate_board(grid_size)
-    ship_is_horizontal = orient_ships(num_ships)
     ship_length = size_ships(num_ships)
-    ship_coords = []
-    for i in range(0, len(ship_is_horizontal)):
-        this_ship = get_coords(ship_is_horizontal[i], ship_length[i], grid_size)
-        for item in this_ship:
-            if item in ship_coords:
-                i = i-1
-            else:
-                ship_coords.extend(this_ship)
-    print "Let's play Battleship!"
-    print_board(board)
-    play_game(ship_coords, grid_size, board)
+    print '''Let's play Battleship!
+             How many players are there?'''
+    option = ''
+    choices = ['1', '2']
+    while option not in choices:
+        option = raw_input("1 or 2?")
+    if option == '1':
+        ship_is_horizontal = orient_ships(num_ships)
+        ship_coords = []
+        for i in range(0, len(ship_is_horizontal)):
+            this_ship = get_coords(ship_is_horizontal[i], ship_length[i], grid_size)
+            for item in this_ship:
+                if item in ship_coords:
+                    i = i-1
+                else:
+                    ship_coords.extend(this_ship)
+        print_board(board)
+        play_game(ship_coords, grid_size, board)
+    else:
+        return
 
 
 start_game(grid_size, num_ships, ship_min, ship_max, num_turns)
