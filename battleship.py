@@ -17,7 +17,7 @@ def generate_board(size):
         board.append(["O"] * size)
     return board
 
-
+# prints board with neat fomatting and a spacer above for visibility
 def print_board(board):
     spacer = 12
     for i in range(spacer):
