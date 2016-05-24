@@ -1,5 +1,7 @@
 # import random for ship coord calcuations
 import random
+# import os for screen size measurement
+import os
 
 # Settings
 # (adjust these values to your liking)
@@ -9,6 +11,10 @@ ship_max = 5
 num_ships = 3
 num_turns = 10
 
+# pull console height for use in screen clearing
+height, width = os.popen('stty size', 'r').read().split()
+screen_height = int(height)
+
 
 # create board and lay out method to display it
 def generate_board(size):
@@ -17,14 +23,21 @@ def generate_board(size):
         board.append(["O"] * size)
     return board
 
+
 # prints board with neat fomatting and a spacer above for visibility
 def print_board(board):
-    spacer = 12
+    spacer = screen_height
     for i in range(spacer):
         print "."
     for row in board:
         print " ".join(row)
     return board
+
+
+# clears screen
+def clear_screen():
+    for i in range(0, screen_height):
+        print "."
 
 
 # return orientation for ship
@@ -82,11 +95,11 @@ def check_guess(guess_cord, ship_coords):
         return False
 
 
-# mark a non-hit guess with an "X"
-def add_guess(guess_coord, board):
+# mark a specific cell, default to marking non-hit guess with "X"
+def add_guess(guess_coord, board, guess='X'):
     guess_row = guess_coord[0]
     guess_col = guess_coord[1]
-    board[guess_row - 1][guess_col - 1] = "X"
+    board[guess_row - 1][guess_col - 1] = guess
     return board
 
 
@@ -99,7 +112,7 @@ def show_ships(ship_coords, board):
 
 
 # give user 'guesses' chances to guess the correct "ship" cell
-def play_game(ship_coords, grid_size, board):
+def play_1p_game(ship_coords, board):
     turn = 1
     guess_coord = []
     while True:
@@ -110,14 +123,15 @@ def play_game(ship_coords, grid_size, board):
         # check if row and column guesses match the ship location
         guess_coord = [guess_row, guess_col]
         if check_guess(guess_coord, ship_coords) is True:
-            print "Congratulations! You sunk a battleship!"
             board = show_ships(ship_coords, board)
             board = add_guess(guess_coord, board)
             print_board(board)
+            print "Congratulations! You sunk a battleship!"
             break
         else:
             row_range = range(0, grid_size)
-            if guess_row - 1 not in row_range or guess_col - 1 not in row_range:
+            if guess_row - 1 not in row_range or\
+                    guess_col - 1 not in row_range:
                 print "Oops, that's not even in the ocean."
             elif(board[guess_row - 1][guess_col - 1] == "X"):
                 print "You guessed that one already."
@@ -133,10 +147,131 @@ def play_game(ship_coords, grid_size, board):
                 print_board(board)
 
 
-# begin game
-def start_game(grid_size, num_ships, ship_min, ship_max, num_turns):
+# creates board, determines ship coords, starts game
+def setup_p1():
     board = generate_board(grid_size)
     ship_length = size_ships(num_ships)
+    ship_is_horizontal = orient_ships(num_ships)
+    ship_coords = []
+    for i in range(0, len(ship_is_horizontal)):
+        this_ship = get_coords(ship_is_horizontal[i], ship_length[i],
+                               grid_size)
+        for item in this_ship:
+            if item in ship_coords:
+                i = i-1
+            else:
+                ship_coords.extend(this_ship)
+    print_board(board)
+    play_1p_game(ship_coords, board)
+
+
+# checks a given set of coordinates against a board for a hit
+def check_2p(guess_row, guess_col, board):
+    if board[guess_row - 1][guess_col - 1] == '*':
+        return True
+    else:
+        return False
+
+
+# inputs a player guess, marks for hit or miss
+def guess_2p(player, board, guess_board):
+    clear_screen()
+    print "Ok %s, your guess." % player
+    guess_row = -1
+    guess_col = -1
+    board_spread = range(0, grid_size)
+    while guess_row not in board_spread and guess_col not in board_spread:
+        guess_row = int(raw_input("What row?"))
+        guess_col = int(raw_input("What column?"))
+    if check_2p(guess_row, guess_col, board):
+        board = add_guess((guess_row, guess_col), board, '!')
+        guess_board = add_guess((guess_row, guess_col), guess_board, '!')
+        print_board(guess_board)
+        print "A hit!"
+        game_on = False
+        for row in board:
+            for entry in row:
+                if entry == '*':
+                    game_on = True
+        if game_on is False:
+            print_board(board)
+            print "%s wins!" % player
+            return
+        else:
+            raw_input("Press Return To Continue...")
+    else:
+        guess_board = add_guess((guess_row, guess_col), guess_board)
+        print_board(guess_board)
+        print "A miss!"
+        raw_input("Press Return To Continue")
+
+
+# alternates player guesses until one player hits all opponent ship cells
+def play_2p_game(players, ship_boards):
+    p1 = players[0]
+    p2 = players[1]
+    p1_board = ship_boards[0]
+    p2_board = ship_boards[1]
+    p1_guesses = generate_board(grid_size)
+    p2_guesses = generate_board(grid_size)
+    game_on = True
+    for i in range(0, screen_height):
+        print "."
+    while game_on:
+        # Player 1 turn
+        guess_2p(p1, p2_board, p1_guesses)
+        guess_2p(p2, p1_board, p2_guesses)
+
+
+# input player names and select ship locations
+def setup_p2():
+    players = ["Player 1", "Player 2"]
+    ship_length = size_ships(num_ships)
+    ship_boards = []
+    for i in range(0, len(players)):
+        board = generate_board(grid_size)
+        ship_boards.append(board)
+        player_board = ship_boards[i]
+        print_board(player_board)
+        players[i] = raw_input("Hello, %s, what is your name?" % players[i])
+        name = players[i]
+        print "Ok, %s, let's set up your ships." % name
+        for ship in ship_length:
+            ship_row = -1
+            ship_col = -1
+            board_spread = range(0, grid_size)
+            while ship_row not in board_spread and ship_col\
+                    not in board_spread:
+                print "This ship is %s blocks long." % ship
+                ship_row = int(raw_input("What row do you want it\
+                                         to start on?"))
+                ship_col = int(raw_input("What column?"))
+            choices = ["hor", "vert"]
+            orientation = ''
+            while orientation not in choices:
+                print "Horizontal or vertical?"
+                orientation = raw_input("'hor' or 'vert'")
+            if orientation == 'hor':
+                ship_is_horizontal = True
+            else:
+                ship_is_horizontal = False
+            coords = []
+            for y in range(0, ship):
+                if ship_is_horizontal:
+                    coords.append((ship_row, ship_col+y))
+                else:
+                    coords.append((ship_row+y, ship_col))
+            for coord in coords:
+                player_board = add_guess(coord, player_board, '*')
+            print "Here is your board!"
+            print_board(player_board)
+        raw_input("Press Return to continue...")
+    play_2p_game(players, ship_boards)
+    return
+
+
+# begin game
+def start_game():
     print '''Let's play Battleship!
              How many players are there?'''
     option = ''
@@ -144,19 +279,9 @@ def start_game(grid_size, num_ships, ship_min, ship_max, num_turns):
     while option not in choices:
         option = raw_input("1 or 2?")
     if option == '1':
-        ship_is_horizontal = orient_ships(num_ships)
-        ship_coords = []
-        for i in range(0, len(ship_is_horizontal)):
-            this_ship = get_coords(ship_is_horizontal[i], ship_length[i], grid_size)
-            for item in this_ship:
-                if item in ship_coords:
-                    i = i-1
-                else:
-                    ship_coords.extend(this_ship)
-        print_board(board)
-        play_game(ship_coords, grid_size, board)
+        setup_p1()
     else:
-        return
+        setup_p2()
 
 
-start_game(grid_size, num_ships, ship_min, ship_max, num_turns)
+start_game()
