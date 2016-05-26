@@ -3,8 +3,14 @@ import random
 # import os for screen size measurement
 import os
 
+'''Welcome to Battleship! Below you'll find settings to adjust to your
+liking. A few things to note while playing:
+Grid Key:
+0 - a blank cell on the grid
+* - an unhit cell containing a piece of ship
+! - a ship cell that has been hit
+X - a shot taken that did not hit a ship'''
 # Settings
-# (adjust these values to your liking)
 grid_size = 10
 ship_min = 2
 ship_max = 5
@@ -111,6 +117,28 @@ def show_ships(ship_coords, board):
     return board
 
 
+# returns input for either a coord guess or orientation, verifies input
+def get_valid_input(cat):
+    if cat == 'row' or cat == 'col':
+        while True:
+            try:
+                number = raw_input("Guess %s:" % cat)
+                number = int(number)
+            except ValueError:
+                pass
+            if number in range(1, grid_size):
+                break
+            print "Please enter a number in the range 1 - %s" % grid_size
+        return number
+    elif cat == 'ori':
+        while True:
+            ori = raw_input("'hor' or 'vert':")
+            if ori == 'hor' or ori == 'vert':
+                return ori
+            else:
+                print "Please enter 'hor' or 'vert'"
+
+
 # give user 'guesses' chances to guess the correct "ship" cell
 def play_1p_game(ship_coords, board):
     turn = 1
@@ -118,8 +146,8 @@ def play_1p_game(ship_coords, board):
     while True:
         print "Turn", turn
         print "Row/Column Range: 1 -", grid_size
-        guess_row = int(raw_input("Guess Row:"))
-        guess_col = int(raw_input("Guess Col:"))
+        guess_row = get_valid_input('row')
+        guess_col = get_valid_input('col')
         # check if row and column guesses match the ship location
         guess_coord = [guess_row, guess_col]
         if check_guess(guess_coord, ship_coords) is True:
@@ -177,12 +205,8 @@ def check_2p(guess_row, guess_col, board):
 def guess_2p(player, board, guess_board):
     clear_screen()
     print "Ok %s, your guess." % player
-    guess_row = -1
-    guess_col = -1
-    board_spread = range(0, grid_size)
-    while guess_row not in board_spread and guess_col not in board_spread:
-        guess_row = int(raw_input("What row?"))
-        guess_col = int(raw_input("What column?"))
+    guess_row = get_valid_input('row')
+    guess_col = get_valid_input('col')
     if check_2p(guess_row, guess_col, board):
         board = add_guess((guess_row, guess_col), board, '!')
         guess_board = add_guess((guess_row, guess_col), guess_board, '!')
@@ -194,9 +218,8 @@ def guess_2p(player, board, guess_board):
                 if entry == '*':
                     game_on = True
         if game_on is False:
-            print_board(board)
             print "%s wins!" % player
-            return
+            break
         else:
             raw_input("Press Return To Continue...")
     else:
@@ -237,20 +260,13 @@ def setup_p2():
         name = players[i]
         print "Ok, %s, let's set up your ships." % name
         for ship in ship_length:
-            ship_row = -1
-            ship_col = -1
-            board_spread = range(0, grid_size)
-            while ship_row not in board_spread and ship_col\
-                    not in board_spread:
-                print "This ship is %s blocks long." % ship
-                ship_row = int(raw_input("What row do you want it\
-                                         to start on?"))
-                ship_col = int(raw_input("What column?"))
-            choices = ["hor", "vert"]
-            orientation = ''
-            while orientation not in choices:
-                print "Horizontal or vertical?"
-                orientation = raw_input("'hor' or 'vert'")
+            print "This ship is %s blocks long." % ship
+            print "What row do you want it to start on?"
+            ship_row = get_valid_input('row')
+            print "What column?"
+            ship_col = get_valid_input('col')
+            print "Horizontal or vertical?"
+            orientation = get_valid_input('ori')
             if orientation == 'hor':
                 ship_is_horizontal = True
             else:
