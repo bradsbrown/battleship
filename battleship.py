@@ -14,12 +14,20 @@ X - a shot taken that did not hit a ship'''
 grid_size = 10
 ship_min = 2
 ship_max = 5
-num_ships = 3
+num_ships = 1
 num_turns = 10
 
 # pull console height for use in screen clearing
 height, width = os.popen('stty size', 'r').read().split()
 screen_height = int(height)
+
+
+class Game(object):
+    """monitors game state"""
+    def __init__(self, on=True):
+        self.on = on
+
+g = Game()
 
 
 # create board and lay out method to display it
@@ -118,7 +126,7 @@ def show_ships(ship_coords, board):
 
 
 # returns input for either a coord guess or orientation, verifies input
-def get_valid_input(cat):
+def get_valid_input(cat, biggest=grid_size):
     if cat == 'row' or cat == 'col':
         while True:
             try:
@@ -126,9 +134,9 @@ def get_valid_input(cat):
                 number = int(number)
             except ValueError:
                 pass
-            if number in range(1, grid_size):
+            if number in range(1, biggest):
                 break
-            print "Please enter a number in the range 1 - %s" % grid_size
+            print "Please enter a number in the range 1 - %s" % biggest
         return number
     elif cat == 'ori':
         while True:
@@ -212,14 +220,19 @@ def guess_2p(player, board, guess_board):
         guess_board = add_guess((guess_row, guess_col), guess_board, '!')
         print_board(guess_board)
         print "A hit!"
-        game_on = False
+        g.on = False
         for row in board:
-            for entry in row:
-                if entry == '*':
-                    game_on = True
-        if game_on is False:
+            if g.on:
+                break
+            else:
+                for entry in row:
+                    if g.on:
+                        break
+                    else:
+                        if entry == '*':
+                            g.on = True
+        if g.on is False:
             print "%s wins!" % player
-            break
         else:
             raw_input("Press Return To Continue...")
     else:
@@ -237,13 +250,19 @@ def play_2p_game(players, ship_boards):
     p2_board = ship_boards[1]
     p1_guesses = generate_board(grid_size)
     p2_guesses = generate_board(grid_size)
-    game_on = True
     for i in range(0, screen_height):
         print "."
-    while game_on:
+    while True:
         # Player 1 turn
-        guess_2p(p1, p2_board, p1_guesses)
-        guess_2p(p2, p1_board, p2_guesses)
+        if g.on:
+            guess_2p(p1, p2_board, p1_guesses)
+        else:
+            break
+        if g.on:
+            # Player 2 turn
+            guess_2p(p2, p1_board, p2_guesses)
+        else:
+            break
 
 
 # input player names and select ship locations
@@ -261,16 +280,22 @@ def setup_p2():
         print "Ok, %s, let's set up your ships." % name
         for ship in ship_length:
             print "This ship is %s blocks long." % ship
-            print "What row do you want it to start on?"
-            ship_row = get_valid_input('row')
-            print "What column?"
-            ship_col = get_valid_input('col')
-            print "Horizontal or vertical?"
+            print "Should it be horizontal or vertical?"
             orientation = get_valid_input('ori')
             if orientation == 'hor':
                 ship_is_horizontal = True
             else:
                 ship_is_horizontal = False
+            print "What row do you want it to start on?"
+            if ship_is_horizontal:
+                ship_row = get_valid_input('row', grid_size - (ship - 1))
+            else:
+                ship_row = get_valid_input('row')
+            print "What column?"
+            if ship_is_horizontal:
+                ship_col = get_valid_input('col')
+            else:
+                ship_col = get_valid_input('col', grid_size - (ship - 1))
             coords = []
             for y in range(0, ship):
                 if ship_is_horizontal:
