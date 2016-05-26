@@ -14,7 +14,7 @@ X - a shot taken that did not hit a ship'''
 grid_size = 10
 ship_min = 2
 ship_max = 5
-num_ships = 1
+num_ships = 3
 num_turns = 10
 
 # pull console height for use in screen clearing
@@ -24,8 +24,10 @@ screen_height = int(height)
 
 class Game(object):
     """monitors game state"""
-    def __init__(self, on=True):
+    def __init__(self, on=True, num_players=''):
         self.on = on
+        self.num_players = num_players
+    player_qty = ['1', '2']
 
 g = Game()
 
@@ -278,7 +280,9 @@ def setup_p2():
         players[i] = raw_input("Hello, %s, what is your name?" % players[i])
         name = players[i]
         print "Ok, %s, let's set up your ships." % name
-        for ship in ship_length:
+        j = 0
+        while j < len(ship_length):
+            ship = ship_length[j]
             print "This ship is %s blocks long." % ship
             print "Should it be horizontal or vertical?"
             orientation = get_valid_input('ori')
@@ -302,10 +306,18 @@ def setup_p2():
                     coords.append((ship_row, ship_col+y))
                 else:
                     coords.append((ship_row+y, ship_col))
+            overlap = False
             for coord in coords:
-                player_board = add_guess(coord, player_board, '*')
-            print "Here is your board!"
-            print_board(player_board)
+                if player_board[coord[0]-1][coord[1]-1] == '*':
+                    overlap = True
+            if not overlap:
+                for coord in coords:
+                    player_board = add_guess(coord, player_board, '*')
+                print "Here is your board!"
+                print_board(player_board)
+                j += 1
+            else:
+                print "Sorry, that ship overlaps another one. Let's try again."
         raw_input("Press Return to continue...")
     play_2p_game(players, ship_boards)
     return
@@ -315,11 +327,9 @@ def setup_p2():
 def start_game():
     print '''Let's play Battleship!
              How many players are there?'''
-    option = ''
-    choices = ['1', '2']
-    while option not in choices:
-        option = raw_input("1 or 2?")
-    if option == '1':
+    while g.num_players not in g.player_qty:
+        g.num_players = raw_input("1 or 2?")
+    if g.num_players == '1':
         setup_p1()
     else:
         setup_p2()
