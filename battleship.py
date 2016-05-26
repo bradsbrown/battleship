@@ -3,6 +3,7 @@ import random
 # import os for screen size measurement
 import os
 
+
 '''Welcome to Battleship! Below you'll find settings to adjust to your
 liking. A few things to note while playing:
 Grid Key:
@@ -16,6 +17,7 @@ ship_min = 2
 ship_max = 5
 num_ships = 3
 num_turns = 10
+
 
 # pull console height for use in screen clearing
 height, width = os.popen('stty size', 'r').read().split()
@@ -31,9 +33,12 @@ class Game(object):
 
 g = Game()
 
+
 '''Below are some universal functions that work in both 1p and 2p play'''
+
+
 # create board and lay out method to display it
-def generate_board(size):
+def generate_board(size=grid_size):
     board = []
     for x in range(size):
         board.append(["O"] * size)
@@ -102,7 +107,9 @@ def get_valid_input(cat, biggest=grid_size):
                 print "Please enter 'hor' or 'vert'"
 
 
-'''These functions are used specifically for 1p play'''
+'''These functions are used specifically for 1p play to generate ships'''
+
+
 # return orientation for ship
 def orient_ships(num_ships):
     ship_is_horizontal = []
@@ -151,6 +158,8 @@ def get_coords(ship_is_horizontal, ship_length, size):
 
 
 '''2p specific functions'''
+
+
 # checks a given set of coordinates against a board for a hit
 def check_2p(guess_row, guess_col, board):
     if board[guess_row - 1][guess_col - 1] == '*':
@@ -193,6 +202,8 @@ def guess_2p(player, board, guess_board):
 
 
 '''Actual game flow for 1p'''
+
+
 # give user 'guesses' chances to guess the correct "ship" cell
 def play_1p_game(ship_coords, board):
     turn = 1
@@ -248,6 +259,8 @@ def setup_p1():
 
 
 '''Actual 2p game flow'''
+
+
 # alternates player guesses until one player hits all opponent ship cells
 def play_2p_game(players, ship_boards):
     p1 = players[0]
@@ -326,7 +339,10 @@ def setup_p2():
     play_2p_game(players, ship_boards)
     return
 
+
 '''Game intro, determines mode'''
+
+
 # begin game
 def start_game():
     print '''Let's play Battleship!
