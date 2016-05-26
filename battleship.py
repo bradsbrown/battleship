@@ -31,7 +31,7 @@ class Game(object):
 
 g = Game()
 
-
+'''Below are some universal functions that work in both 1p and 2p play'''
 # create board and lay out method to display it
 def generate_board(size):
     board = []
@@ -56,6 +56,53 @@ def clear_screen():
         print "."
 
 
+# mark all ship cells on board with an "*"
+def show_ships(ship_coords, board):
+    for i in range(0, len(ship_coords)):
+        # demarcate ship locations and hits, print board
+        board[ship_coords[i][0]-1][ship_coords[i][1]-1] = "*"
+    return board
+
+
+# checks a guess against the set of ship cells to verify a hit
+def check_guess(guess_cord, ship_coords):
+    if str(guess_cord) in str(ship_coords):
+        return True
+    else:
+        return False
+
+
+# mark a specific cell, default to marking non-hit guess with "X"
+def add_guess(guess_coord, board, guess='X'):
+    guess_row = guess_coord[0]
+    guess_col = guess_coord[1]
+    board[guess_row - 1][guess_col - 1] = guess
+    return board
+
+
+# returns input for either a coord guess or orientation, verifies input
+def get_valid_input(cat, biggest=grid_size):
+    if cat == 'row' or cat == 'col':
+        while True:
+            try:
+                number = raw_input("Guess %s:" % cat)
+                number = int(number)
+            except ValueError:
+                pass
+            if number in range(1, biggest):
+                break
+            print "Please enter a number in the range 1 - %s" % biggest
+        return number
+    elif cat == 'ori':
+        while True:
+            ori = raw_input("'hor' or 'vert':")
+            if ori == 'hor' or ori == 'vert':
+                return ori
+            else:
+                print "Please enter 'hor' or 'vert'"
+
+
+'''These functions are used specifically for 1p play'''
 # return orientation for ship
 def orient_ships(num_ships):
     ship_is_horizontal = []
@@ -103,52 +150,49 @@ def get_coords(ship_is_horizontal, ship_length, size):
     return single_ship
 
 
-# checks a guess against the set of ship cells to verify a hit
-def check_guess(guess_cord, ship_coords):
-    if str(guess_cord) in str(ship_coords):
+'''2p specific functions'''
+# checks a given set of coordinates against a board for a hit
+def check_2p(guess_row, guess_col, board):
+    if board[guess_row - 1][guess_col - 1] == '*':
         return True
     else:
         return False
 
 
-# mark a specific cell, default to marking non-hit guess with "X"
-def add_guess(guess_coord, board, guess='X'):
-    guess_row = guess_coord[0]
-    guess_col = guess_coord[1]
-    board[guess_row - 1][guess_col - 1] = guess
-    return board
-
-
-# mark all ship cells on board with an "*"
-def show_ships(ship_coords, board):
-    for i in range(0, len(ship_coords)):
-        # demarcate ship locations and hits, print board
-        board[ship_coords[i][0]-1][ship_coords[i][1]-1] = "*"
-    return board
-
-
-# returns input for either a coord guess or orientation, verifies input
-def get_valid_input(cat, biggest=grid_size):
-    if cat == 'row' or cat == 'col':
-        while True:
-            try:
-                number = raw_input("Guess %s:" % cat)
-                number = int(number)
-            except ValueError:
-                pass
-            if number in range(1, biggest):
+# inputs a player guess, marks for hit or miss
+def guess_2p(player, board, guess_board):
+    clear_screen()
+    print "Ok %s, your guess." % player
+    guess_row = get_valid_input('row')
+    guess_col = get_valid_input('col')
+    if check_2p(guess_row, guess_col, board):
+        board = add_guess((guess_row, guess_col), board, '!')
+        guess_board = add_guess((guess_row, guess_col), guess_board, '!')
+        print_board(guess_board)
+        print "A hit!"
+        g.on = False
+        for row in board:
+            if g.on:
                 break
-            print "Please enter a number in the range 1 - %s" % biggest
-        return number
-    elif cat == 'ori':
-        while True:
-            ori = raw_input("'hor' or 'vert':")
-            if ori == 'hor' or ori == 'vert':
-                return ori
             else:
-                print "Please enter 'hor' or 'vert'"
+                for entry in row:
+                    if g.on:
+                        break
+                    else:
+                        if entry == '*':
+                            g.on = True
+        if g.on is False:
+            print "%s wins!" % player
+        else:
+            raw_input("Press Return To Continue...")
+    else:
+        guess_board = add_guess((guess_row, guess_col), guess_board)
+        print_board(guess_board)
+        print "A miss!"
+        raw_input("Press Return To Continue")
 
 
+'''Actual game flow for 1p'''
 # give user 'guesses' chances to guess the correct "ship" cell
 def play_1p_game(ship_coords, board):
     turn = 1
@@ -203,47 +247,7 @@ def setup_p1():
     play_1p_game(ship_coords, board)
 
 
-# checks a given set of coordinates against a board for a hit
-def check_2p(guess_row, guess_col, board):
-    if board[guess_row - 1][guess_col - 1] == '*':
-        return True
-    else:
-        return False
-
-
-# inputs a player guess, marks for hit or miss
-def guess_2p(player, board, guess_board):
-    clear_screen()
-    print "Ok %s, your guess." % player
-    guess_row = get_valid_input('row')
-    guess_col = get_valid_input('col')
-    if check_2p(guess_row, guess_col, board):
-        board = add_guess((guess_row, guess_col), board, '!')
-        guess_board = add_guess((guess_row, guess_col), guess_board, '!')
-        print_board(guess_board)
-        print "A hit!"
-        g.on = False
-        for row in board:
-            if g.on:
-                break
-            else:
-                for entry in row:
-                    if g.on:
-                        break
-                    else:
-                        if entry == '*':
-                            g.on = True
-        if g.on is False:
-            print "%s wins!" % player
-        else:
-            raw_input("Press Return To Continue...")
-    else:
-        guess_board = add_guess((guess_row, guess_col), guess_board)
-        print_board(guess_board)
-        print "A miss!"
-        raw_input("Press Return To Continue")
-
-
+'''Actual 2p game flow'''
 # alternates player guesses until one player hits all opponent ship cells
 def play_2p_game(players, ship_boards):
     p1 = players[0]
@@ -322,7 +326,7 @@ def setup_p2():
     play_2p_game(players, ship_boards)
     return
 
-
+'''Game intro, determines mode'''
 # begin game
 def start_game():
     print '''Let's play Battleship!
