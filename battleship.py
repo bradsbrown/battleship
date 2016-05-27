@@ -193,6 +193,19 @@ def guess_2p(player, board, guess_board, player_num):
 def play_1p_game():
     guesses = NUM_TURNS
     while G.on:
+        G.on = False
+        for row in P2.ship_board:
+            if G.on:
+                break
+            else:
+                for entry in row:
+                    if G.on:
+                        break
+                    else:
+                        if entry == '*':
+                            G.on = True
+        if not G.on:
+            print "Congratulations %s, you won!" % G.players[0]
         print "Remaining guesses:", guesses
         print "Row/Column Range: 1 -", GRID_SIZE
         guess_row = get_valid_input('row')
@@ -204,8 +217,9 @@ def play_1p_game():
             P2.add_guess(guess_coord, P2.ship_board, '!')
             P1.print_board(P1.guess_board)
             guesses = NUM_TURNS
-            print "Congratulations! You got a hit!"
+            print "You got a hit! Your guess count is reset to %s." % guesses
             raw_input("Press Return to continue...")
+            P1.print_board(P1.guess_board)
         else:
             row_range = range(0, GRID_SIZE)
             if guess_row - 1 not in row_range or\
@@ -224,6 +238,7 @@ def play_1p_game():
             if guesses == 0:
                 P2.print_board(P2.ship_board)
                 print "Game Over"
+                print "%s was too sneaky for you!" % G.players[1]
                 G.on = False
             else:
                 P1.print_board(P1.guess_board)
