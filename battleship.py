@@ -78,19 +78,19 @@ class BoardSet(object):
 
     # determine ship lengths
     def size_ships(self):
-        ship_length = []
+        SHIP_LENGTH = []
         for i in range(0, NUM_SHIPS):
-            ship_length.append(random.randint(SHIP_MIN, SHIP_MAX))
-        return ship_length
+            SHIP_LENGTH.append(random.randint(SHIP_MIN, SHIP_MAX))
+        return SHIP_LENGTH
 
     # choose starting point for ship, determine all cells for ship
-    def get_coords(self, ship_is_horizontal, ship_length, size=GRID_SIZE):
+    def get_coords(self, ship_is_horizontal, SHIP_LENGTH, size=GRID_SIZE):
         single_ship = []
         # choose ship starting point
         if ship_is_horizontal is False:
             # determine row
             ship_row = 1 + random.randint(1, size - 1 -
-                                          (ship_length - 1))
+                                          (SHIP_LENGTH - 1))
             # determine column
             ship_col = 1 + random.randint(0, size - 1)
         # set coords for horizontal ship
@@ -99,21 +99,20 @@ class BoardSet(object):
             ship_row = 1 + random.randint(1, size - 1)
             # determine column
             ship_col = 1 + random.randint(0, size - 1 -
-                                          (ship_length - 1))
+                                          (SHIP_LENGTH - 1))
         # determine all coordinate points for ship location
         if ship_is_horizontal is True:
-            for j in range(0, ship_length):
+            for j in range(0, SHIP_LENGTH):
                 single_ship.append([ship_row, ship_col + j])
         else:
-            for j in range(0, ship_length):
+            for j in range(0, SHIP_LENGTH):
                 single_ship.append([ship_row + j, ship_col])
         return single_ship
 
 G = Game()
 P1 = BoardSet()
 P2 = BoardSet()
-size_ships = P1.size_ships
-ship_length = size_ships()
+SHIP_LENGTH = P1.size_ships()
 ship_boards = [P1.ship_board, P2.ship_board]
 p_boardsets = [P1, P2]
 
@@ -149,6 +148,15 @@ def get_valid_input(cat, biggest=GRID_SIZE):
                 print "Please enter 'hor' or 'vert'"
 
 
+def check_for_unhit_ships(board):
+    '''validate that there are still unhit ship cells to try for,
+    return True if so, False if not'''
+    for row in board:
+        if '*' in row:
+            return True
+    return False
+
+
 '''2p specific functions'''
 
 
@@ -164,18 +172,8 @@ def guess_2p(player, board, guess_board, player_num):
         p_BoardSet.add_guess((guess_row, guess_col), guess_board, '!')
         p_BoardSet.print_board(guess_board)
         print "A hit!"
-        G.on = False
-        for row in board:
-            if G.on:
-                break
-            else:
-                for entry in row:
-                    if G.on:
-                        break
-                    else:
-                        if entry == '*':
-                            G.on = True
-        if G.on is False:
+        if not check_for_unhit_ships(board):
+            G.on = False
             print "%s wins!" % player
         else:
             raw_input("Press Return To Continue...")
@@ -193,26 +191,21 @@ def guess_2p(player, board, guess_board, player_num):
 def play_1p_game():
     guesses = NUM_TURNS
     while G.on:
-        G.on = False
-        for row in P2.ship_board:
-            if G.on:
-                break
-            else:
-                for entry in row:
-                    if G.on:
-                        break
-                    else:
-                        if entry == '*':
-                            G.on = True
-        if not G.on:
+        if not check_for_unhit_ships(P2.ship_board):
+            G.on = False
             print "Congratulations %s, you won!" % G.players[0]
+            return
+
+        # Get the user's guess
         print "Remaining guesses:", guesses
         print "Row/Column Range: 1 -", GRID_SIZE
         guess_row = get_valid_input('row')
         guess_col = get_valid_input('col')
-        # check if row and column guesses match the ship location
         guess_coord = [guess_row, guess_col]
+
+        # check if row and column guesses match a ship cell
         if P1.check_hit(guess_row, guess_col, P2.ship_board) is True:
+            # if hit, update guess board and opponent ship board with hit
             P1.add_guess(guess_coord, P1.guess_board, '!')
             P2.add_guess(guess_coord, P2.ship_board, '!')
             P1.print_board(P1.guess_board)
@@ -220,26 +213,28 @@ def play_1p_game():
             print "You got a hit! Your guess count is reset to %s." % guesses
             raw_input("Press Return to continue...")
             P1.print_board(P1.guess_board)
+
         else:
-            row_range = range(0, GRID_SIZE)
-            if guess_row - 1 not in row_range or\
-                    guess_col - 1 not in row_range:
-                print "Oops, that's not even in the ocean."
-                raw_input("Press Return to continue...")
-            elif(P1.guess_board[guess_row - 1][guess_col - 1] == "X"):
+            # check that the miss wasn't a previous guess
+            if(P1.guess_board[guess_row - 1][guess_col - 1] == "X"):
                 print "You guessed that one already."
                 raw_input("Press Return to continue...")
+
             else:
+                # if not, mark the miss on both boards, and decrement guesses
                 print "You missed my battleship!"
                 P1.add_guess(guess_coord, P1.guess_board)
                 P2.add_guess(guess_coord, P2.ship_board)
                 guesses -= 1
                 raw_input("Press Return to continue...")
+
             if guesses == 0:
+                # if out of guesses, end game
                 P2.print_board(P2.ship_board)
                 print "Game Over"
                 print "%s was too sneaky for you!" % G.players[1]
                 G.on = False
+
             else:
                 P1.print_board(P1.guess_board)
 
@@ -248,11 +243,11 @@ def play_1p_game():
 def setup_P1():
     G.players[1] = "Computer"
     G.players[0] = raw_input("What is your name?")
-    ship_length = P2.size_ships()
+    SHIP_LENGTH = P2.size_ships()
     ship_is_horizontal = P2.orient_ships()
     ship_coords = []
     for i in range(0, len(ship_is_horizontal)):
-        this_ship = P2.get_coords(ship_is_horizontal[i], ship_length[i])
+        this_ship = P2.get_coords(ship_is_horizontal[i], SHIP_LENGTH[i])
         for item in this_ship:
             if item in ship_coords:
                 i = i-1
@@ -301,8 +296,8 @@ def setup_P2():
         name = G.players[i]
         print "Ok, %s, let's set up your ships." % name
         j = 0
-        while j < len(ship_length):
-            ship = ship_length[j]
+        while j < len(SHIP_LENGTH):
+            ship = SHIP_LENGTH[j]
             print "This ship is %s blocks long." % ship
             print "Should it be horizontal or vertical?"
             orientation = get_valid_input('ori')
