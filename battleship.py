@@ -87,8 +87,8 @@ class Game(object):
         while result == 'retry':
             self.opponent.board.print_board()
             print('Your turn, {}'.format(self.player.name))
-            guess_row = get_valid_coordinate('row')
             guess_col = get_valid_coordinate('col')
+            guess_row = get_valid_coordinate('row')
             result = self.fire_shot(guess_row, guess_col)
 
     def end_game(self):
@@ -181,8 +181,8 @@ class BoardSet(object):
         is_inserted = False
         while not is_inserted:
             print('What cell should it start on?')
-            start_row = get_valid_coordinate('row', row_max + 1)
             start_col = get_valid_coordinate('col', col_max + 1)
+            start_row = get_valid_coordinate('row', row_max + 1)
             is_inserted = self.insert_ship(orientation, length,
                                            start_row, start_col)
             if not is_inserted:
@@ -270,4 +270,5 @@ def start_game():
     game.play()
 
 
-start_game()
+if __name__ == "__main__":
+    start_game()
