@@ -105,6 +105,7 @@ class BoardSet(object):
                 single_ship.append([ship_row + j, ship_col])
         return single_ship
 
+
 G = Game()
 P1 = BoardSet()
 P2 = BoardSet()
@@ -116,41 +117,42 @@ p_boardsets = [P1, P2]
 '''Below are some universal functions that work in both 1p and 2p play'''
 
 
-# clears screen
 def clear_screen(buff_size=0):
-    for _ in range(buff_size, SCREEN_HEIGHT):
-        print "."
+    print '\n'.join('.' * (SCREEN_HEIGHT - buff_size))
+
+
+def get_valid_orientation(_, __):
+    orientation = ''
+    while orientation not in ('hor', 'vert'):
+        orientation = raw_input("'hor' or 'vert':")
+    return orientation
+
+
+def get_valid_coordinate(category, biggest):
+    coordinate = 0
+    while coordinate not in (list(range(1, biggest + 1))):
+        coordinate = raw_input("Guess {} in range 1-{}:".format(category,
+                                                               biggest))
+        coordinate = int(coordinate) if coordinate.isdigit() else coordinate
+    return coordinate
+
+
+input_map = {
+        'row': get_valid_coordinate,
+        'col': get_valid_coordinate,
+        'ori': get_valid_orientation
+        }
 
 
 # returns input for either a coord guess or orientation, verifies input
 def get_valid_input(cat, biggest=GRID_SIZE):
-    if cat == 'row' or cat == 'col':
-        while True:
-            try:
-                number = raw_input("Guess %s:" % cat)
-                number = int(number)
-            except ValueError:
-                pass
-            if number in range(1, biggest + 1):
-                break
-            print "Please enter a number in the range 1 - %s" % biggest
-        return number
-    elif cat == 'ori':
-        while True:
-            ori = raw_input("'hor' or 'vert':")
-            if ori == 'hor' or ori == 'vert':
-                return ori
-            else:
-                print "Please enter 'hor' or 'vert'"
+    return input_map[cat](cat, biggest)
 
 
 def check_for_unhit_ships(board):
     '''validate that there are still unhit ship cells to try for,
     return True if so, False if not'''
-    for row in board:
-        if '*' in row:
-            return True
-    return False
+    return any(['*' in row for row in board])
 
 
 '''2p specific functions'''
