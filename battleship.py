@@ -41,14 +41,10 @@ class BoardSet(object):
         self.guess_board = self.generate_board()
 
     def generate_board(self):
-        board = []
-        for x in range(self.size):
-            board.append(["O"] * self.size)
-        return board
+        return [["0"] * self.size for _ in range(self.size)]
 
     def print_board(self, board):
-        for i in range(SCREEN_HEIGHT):
-            print "."
+        clear_screen(buff_size=self.size)
         for row in board:
             print " ".join(row)
 
@@ -121,8 +117,8 @@ p_boardsets = [P1, P2]
 
 
 # clears screen
-def clear_screen():
-    for i in range(0, SCREEN_HEIGHT):
+def clear_screen(buff_size=0):
+    for _ in range(buff_size, SCREEN_HEIGHT):
         print "."
 
 
