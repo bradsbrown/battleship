@@ -1,6 +1,10 @@
+#! /usr/bin/env python
+
 import os
 import random
 from six.moves import input
+
+import click
 
 
 '''Welcome to Battleship! Below you'll find settings to adjust to your
@@ -26,15 +30,12 @@ class Game(object):
     def __init__(self, p1_name, p2_name='Computer', is_2p=False):
         self.ship_sizes = self.size_ships()
         self.is_2p = is_2p
-        self.players = self.setup_players(p1_name, p2_name, self.is_2p)
+        self.players = self.setup_players()
         self._active_player = 0
 
-    def setup_players(self, p1_name, p2_name, is_2p):
-        if is_2p:
-            return [Player(p1_name, self.ship_sizes, is_computer=False),
-                    Player(p2_name, self.ship_sizes, is_computer=False)]
+    def setup_players(self):
         return [Player(p1_name, self.ship_sizes, is_computer=False),
-                Player(p2_name, self.ship_sizes)]
+                Player(p2_name, self.ship_sizes, is_computer=not self.is_2p)]
 
     # determine ship lengths
     def size_ships(self):
@@ -240,30 +241,15 @@ def get_valid_coordinate(category, biggest=GRID_SIZE):
     return coordinate - 1
 
 
-def get_number_of_players():
-    num_players = 0
-    while num_players not in (1, 2):
-        num_players = input("1 or 2?")
-        if num_players.isdigit():
-            num_players = int(num_players)
-    return num_players
-
-
-def get_names(num_players):
-    names = []
-    for x in range(num_players):
-        name = input("Player {} name?".format(x + 1))
-        print("Welcome, {}!".format(name))
-        names.append(name)
-    return names
-
-
 # begin game
-def start_game():
+@click.command()
+@click.option('--number-of-players', '-n',
+             type=click.IntRange(1, 2), prompt="How many players?")
+def start_game(number_of_players):
     print('''Let's play Battleship!
              How many players are there?''')
-    num_players = get_number_of_players()
-    names = get_names(num_players)
+    num_players = number_of_players
+    names = [click.prompt(f'Player {x + 1} name?') for x in range(num_players)]
     game = Game(p1_name=names[0],
                 p2_name=names[1] if num_players == 2 else None,
                 is_2p=(num_players == 2))
@@ -271,4 +257,4 @@ def start_game():
 
 
 if __name__ == "__main__":
-    start_game()
+   start_game()
