@@ -22,15 +22,17 @@ NUM_TURNS = 10
 
 
 class Game(object):
-    def __init__(self, p1_name=None, p2_name='Computer', is_2p=False):
+    def __init__(self, p1_name=None, p2_name='Computer',
+                 is_2p=False, debug=False):
         self.ship_sizes = self.size_ships()
         self.is_2p = is_2p
-        self.players = self.setup_players(p1_name, p2_name)
+        self.players = self.setup_players(p1_name, p2_name, debug=debug)
         self._active_player = 0
 
-    def setup_players(self, p1_name, p2_name):
-        return [Player(p1_name, self.ship_sizes),
-                Player(p2_name, self.ship_sizes, is_computer=not self.is_2p)]
+    def setup_players(self, p1_name, p2_name, **kwargs):
+        return [Player(p1_name, self.ship_sizes, **kwargs),
+                Player(p2_name, self.ship_sizes,
+                       is_computer=not self.is_2p, **kwargs)]
 
     # determine ship lengths
     def size_ships(self):
@@ -99,9 +101,9 @@ class Game(object):
 
 
 class Player(object):
-    def __init__(self, name, ship_sizes, is_computer=False):
+    def __init__(self, name, ship_sizes, is_computer=False, debug=False):
         self.name = name
-        self.board = BoardSet(ship_sizes, autofill=is_computer)
+        self.board = BoardSet(ship_sizes, autofill=is_computer, debug=debug)
         self.turns_remaining = NUM_TURNS
 
     def use_turn(self):
@@ -132,10 +134,11 @@ class BoardSet(object):
     valid_orientations = [horizontal, vertical]
     untried = (empty_cell, ship_cell)
 
-    def __init__(self, ship_sizes, autofill=True):
+    def __init__(self, ship_sizes, autofill=True, debug=False):
         self.size = GRID_SIZE
         self.ship_board = self.generate_board()
         self.ship_sizes = ship_sizes
+        self.debug = debug
         if autofill:
             for ship in self.ship_sizes:
                 self.autofill_ship(ship)
@@ -145,6 +148,7 @@ class BoardSet(object):
 
     def print_board(self, hide_ships=False, message=''):
         click.clear()
+        hide_ships = hide_ships if not self.debug else False
         for row in self.ship_board:
             row = self._hide_ships(row) if hide_ships else row
             click.echo(' '.join(row))
@@ -222,9 +226,9 @@ class BoardSet(object):
             self.horizontal: (self._build_static_axis, self._build_dynamic_axis),
             self.vertical: (self._build_dynamic_axis, self._build_static_axis)
         }[orientation]
-        coords = zip(
+        coords = list(zip(
             row_builder(start_row, length), col_builder(start_col, length)
-        )
+            ))
         if any(self.get_cell(*x) != self.empty_cell for x in coords):
             return False
         for coord in coords:
@@ -253,11 +257,12 @@ def get_player_name(player_num):
 @click.command()
 @click.option('--number-of-players', '-n',
              type=click.IntRange(1, 2), prompt="How many players?")
-def start_game(number_of_players):
+@click.option('--debug', is_flag=True)
+def start_game(number_of_players, debug):
     click.secho("Let's play Battleship!", fg='green')
     game = Game(p1_name=get_player_name(1),
                 p2_name=get_player_name(2) if number_of_players == 2 else None,
-                is_2p=(number_of_players == 2))
+                is_2p=(number_of_players == 2), debug=debug)
     game.play()
 
 
