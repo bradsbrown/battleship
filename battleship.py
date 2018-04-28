@@ -1,6 +1,9 @@
+#! /usr/bin/env python
+
 import os
 import random
-from six.moves import input
+
+import click
 
 
 '''Welcome to Battleship! Below you'll find settings to adjust to your
@@ -18,23 +21,18 @@ NUM_SHIPS = 3
 NUM_TURNS = 10
 
 
-# pull console height for use in screen clearing
-SCREEN_HEIGHT = int(os.popen('stty size', 'r').read().split()[0])
-
-
 class Game(object):
-    def __init__(self, p1_name, p2_name='Computer', is_2p=False):
+    def __init__(self, p1_name=None, p2_name='Computer',
+                 is_2p=False, debug=False):
         self.ship_sizes = self.size_ships()
         self.is_2p = is_2p
-        self.players = self.setup_players(p1_name, p2_name, self.is_2p)
+        self.players = self.setup_players(p1_name, p2_name, debug=debug)
         self._active_player = 0
 
-    def setup_players(self, p1_name, p2_name, is_2p):
-        if is_2p:
-            return [Player(p1_name, self.ship_sizes, is_computer=False),
-                    Player(p2_name, self.ship_sizes, is_computer=False)]
-        return [Player(p1_name, self.ship_sizes, is_computer=False),
-                Player(p2_name, self.ship_sizes)]
+    def setup_players(self, p1_name, p2_name, **kwargs):
+        return [Player(p1_name, self.ship_sizes, **kwargs),
+                Player(p2_name, self.ship_sizes,
+                       is_computer=not self.is_2p, **kwargs)]
 
     # determine ship lengths
     def size_ships(self):
@@ -67,9 +65,6 @@ class Game(object):
         else:
             if result == 'miss':
                 self.player.use_turn()
-            message = 'You have {} turns remaining'
-            print(message.format(self.player.turns_remaining))
-        return None
 
     def play(self):
         self.setup()
@@ -86,82 +81,104 @@ class Game(object):
         result = 'retry'
         while result == 'retry':
             self.opponent.board.print_board()
-            print('Your turn, {}'.format(self.player.name))
+            click.echo('Your turn, {}'.format(self.player.name))
             guess_col = get_valid_coordinate('col')
             guess_row = get_valid_coordinate('row')
             result = self.fire_shot(guess_row, guess_col)
 
     def end_game(self):
-        print('Game over!')
+        click.secho('Game over!', bg='green', fg='red')
         if self.is_2p:
             opponent_done = self.opponent.board.is_finished
             winner = self.player if opponent_done else self.opponent
-            print('{} wins!'.format(winner.name))
+            click.secho('{} wins!'.format(winner.name), fg='green')
         else:
-            won = self.opponent.board.is_finished
-            print('You {}!'.format({True: 'won', False: 'lost'}[won]))
-        print('Thanks for playing Battleship!')
+            status= self.opponent.board.is_finished
+            result = {True: 'won', False: 'lost'}[status]
+            color = {True: 'green', False: 'red'}[status]
+            click.secho(f'You {result}!', fg=color)
+        click.secho('Thanks for playing Battleship!', fg='blue')
 
 
 class Player(object):
-    def __init__(self, name, ship_sizes, is_computer=True):
+    def __init__(self, name, ship_sizes, is_computer=False, debug=False):
         self.name = name
-        self.board = BoardSet(ship_sizes, autofill=is_computer)
+        self.board = BoardSet(ship_sizes, autofill=is_computer, debug=debug)
         self.turns_remaining = NUM_TURNS
 
     def use_turn(self):
         self.turns_remaining -= 1
+        click.echo(f'{self.name} has {self.turns_remaining} turns remaining.')
 
     @property
     def out_of_turns(self):
         return self.turns_remaining <= 0
 
     def do_board_setup(self):
-        print('Ok, {}, time to set up your ships'.format(self.name))
-        input('Press Enter to begin')
+        click.secho(f"Time to set up {self.name}'s ships", fg='green')
+        click.pause()
         for ship in self.board.ship_sizes:
             self.board.player_build_ship(ship)
-        clear_screen()
-        print('Great, all set!')
-        input('Press Enter to continue')
+        click.clear()
+        click.secho('Great, all set!', fg='green')
+        click.pause()
 
 
 class BoardSet(object):
-    def __init__(self, ship_sizes, autofill=True):
+    empty_cell = '0'
+    ship_cell = click.style('*', fg='blue')
+    hit_cell = click.style('!', fg='green')
+    miss_cell = click.style('X', fg='red')
+    horizontal = 'hor'
+    vertical = 'vert'
+    valid_orientations = [horizontal, vertical]
+    untried = (empty_cell, ship_cell)
+
+    def __init__(self, ship_sizes, autofill=True, debug=False):
         self.size = GRID_SIZE
         self.ship_board = self.generate_board()
         self.ship_sizes = ship_sizes
+        self.debug = debug
         if autofill:
             for ship in self.ship_sizes:
                 self.autofill_ship(ship)
 
     def generate_board(self):
-        return [["0"] * self.size for _ in range(self.size)]
+        return [[self.empty_cell] * self.size for _ in range(self.size)]
 
     def print_board(self, hide_ships=False, message=''):
-        clear_screen(buff_size=self.size)
+        click.clear()
+        hide_ships = hide_ships if not self.debug else False
         for row in self.ship_board:
             row = self._hide_ships(row) if hide_ships else row
-            print(" ".join(row))
-        print(message)
+            click.echo(' '.join(row))
+        if message:
+            click.echo(message)
 
     def _hide_ships(self, row):
-        return [x.replace('*', '0') for x in row]
+        return [x.replace(self.ship_cell, self.empty_cell) for x in row]
 
     def fire_shot(self, guess_row, guess_col):
         cell = self.get_cell(guess_row, guess_col)
-        if cell in ('*', '0'):
-            if cell == '*':
-                mark, message, result = '!', 'A hit!', 'hit'
-            else:
-                mark, message, result = 'X', 'You missed!', 'miss'
-            self.mark_board(guess_row, guess_col, mark)
+        if cell in self.untried:
+            self.mark_board(
+                guess_row, guess_col, {
+                    self.empty_cell: self.miss_cell,
+                    self.ship_cell: self.hit_cell
+                }[cell]
+            )
+            message = {
+                self.empty_cell: 'You missed!', self.ship_cell: 'A hit!'
+            }[cell]
+            result = {self.empty_cell: 'miss', self.ship_cell: 'hit'}[cell]
         else:
-            message, result = "You already guessed that one!", 'retry'
+            message = 'You already guessed that one!'
+            result= 'retry'
         self.print_board(hide_ships=True, message=message)
         return result
 
-    def mark_board(self, guess_row, guess_col, mark='X'):
+    def mark_board(self, guess_row, guess_col, mark=None):
+        mark = mark or self.miss_cell
         self.ship_board[guess_row][guess_col] = mark
         return self.ship_board
 
@@ -170,26 +187,26 @@ class BoardSet(object):
 
     @property
     def is_finished(self):
-        return not any('*' in row for row in self.ship_board)
+        return not any(self.ship_cell in row for row in self.ship_board)
 
     def player_build_ship(self, length):
         self.print_board()
-        print('This ship is {} cells long.'.format(length))
-        print('Should it be horizontal or vertical?')
-        orientation = get_valid_orientation()
+        click.secho(f'This ship is {length} cells long.', fg='green')
+        orientation = click.prompt('Should it be horizontal (hor) or vertical (vert)?',
+                                   type=click.Choice(self.valid_orientations))
         row_max, col_max = self.get_maxes(orientation, length)
         is_inserted = False
         while not is_inserted:
-            print('What cell should it start on?')
+            click.secho('What cell should it start on?', fg='green')
             start_col = get_valid_coordinate('col', col_max + 1)
             start_row = get_valid_coordinate('row', row_max + 1)
             is_inserted = self.insert_ship(orientation, length,
                                            start_row, start_col)
             if not is_inserted:
-                print('That overlaps another ship! Try again!')
+                click.secho('That overlaps another ship! Try again!', fg='red')
 
     def autofill_ship(self, length):
-        orientation = random.choice(['hor', 'vert'])
+        orientation = random.choice(self.valid_orientations)
         row_max, col_max = self.get_maxes(orientation, length)
         is_inserted = False
         while not is_inserted:
@@ -198,77 +215,56 @@ class BoardSet(object):
             is_inserted = self.insert_ship(orientation, length,
                                            start_row, start_col)
 
+    def _build_static_axis(self, start_coord, length):
+        return [start_coord] * length
+
+    def _build_dynamic_axis(self, start_coord, length):
+        return [start_coord + x for x in range(length)]
+
     def insert_ship(self, orientation, length, start_row, start_col):
-        if orientation == 'hor':
-            rows = [start_row] * length
-            cols = [start_col + x for x in range(length)]
-        else:
-            rows = [start_row + x for x in range(length)]
-            cols = [start_col] * length
-        coords = zip(rows, cols)
-        if any(self.get_cell(*x) != '0' for x in coords):
+        row_builder, col_builder = {
+            self.horizontal: (self._build_static_axis, self._build_dynamic_axis),
+            self.vertical: (self._build_dynamic_axis, self._build_static_axis)
+        }[orientation]
+        coords = list(zip(
+            row_builder(start_row, length), col_builder(start_col, length)
+            ))
+        if any(self.get_cell(*x) != self.empty_cell for x in coords):
             return False
         for coord in coords:
-            self.mark_board(*coord, mark='*')
+            self.mark_board(*coord, mark=self.ship_cell)
         return True
 
     def get_maxes(self, orientation, length):
-        row_max, col_max = GRID_SIZE - 1, GRID_SIZE - length
-        if orientation == 'vert':
-            row_max, col_max = col_max, row_max
-        return row_max, col_max
-
-
-def clear_screen(buff_size=0):
-    print('\n'.join('.' * (SCREEN_HEIGHT - buff_size)))
-
-
-def get_valid_orientation():
-    orientation = ''
-    while orientation not in ('hor', 'vert'):
-        orientation = input("'hor' or 'vert':")
-    return orientation
+        big_max = GRID_SIZE - 1
+        small_max = GRID_SIZE - length
+        return {
+            self.horizontal: (big_max, small_max),
+            self.vertical: (small_max, big_max)
+        }[orientation]
 
 
 def get_valid_coordinate(category, biggest=GRID_SIZE):
-    coordinate = 0
-    while coordinate not in (list(range(1, biggest + 1))):
-        coordinate = input("Enter {} in range 1-{}:".format(category, biggest))
-        coordinate = int(coordinate) if coordinate.isdigit() else coordinate
-    # players input in a range that starts at 1,
-    # the game logic uses a 0-indexed board
-    return coordinate - 1
+    msg = f'Enter {category} in range 1-{biggest}'
+    return click.prompt(msg, type=click.IntRange(1, biggest)) - 1
 
 
-def get_number_of_players():
-    num_players = 0
-    while num_players not in (1, 2):
-        num_players = input("1 or 2?")
-        if num_players.isdigit():
-            num_players = int(num_players)
-    return num_players
-
-
-def get_names(num_players):
-    names = []
-    for x in range(num_players):
-        name = input("Player {} name?".format(x + 1))
-        print("Welcome, {}!".format(name))
-        names.append(name)
-    return names
+def get_player_name(player_num):
+    return click.prompt(f'Player {player_num} name?')
 
 
 # begin game
-def start_game():
-    print('''Let's play Battleship!
-             How many players are there?''')
-    num_players = get_number_of_players()
-    names = get_names(num_players)
-    game = Game(p1_name=names[0],
-                p2_name=names[1] if num_players == 2 else None,
-                is_2p=(num_players == 2))
+@click.command()
+@click.option('--number-of-players', '-n',
+             type=click.IntRange(1, 2), prompt="How many players?")
+@click.option('--debug', is_flag=True)
+def start_game(number_of_players, debug):
+    click.secho("Let's play Battleship!", fg='green')
+    game = Game(p1_name=get_player_name(1),
+                p2_name=get_player_name(2) if number_of_players == 2 else None,
+                is_2p=(number_of_players == 2), debug=debug)
     game.play()
 
 
 if __name__ == "__main__":
-    start_game()
+   start_game()
