@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 
-import os
 import random
 
 import click
@@ -22,17 +21,21 @@ NUM_TURNS = 10
 
 
 class Game(object):
-    def __init__(self, p1_name=None, p2_name='Computer',
-                 is_2p=False, debug=False):
+    def __init__(
+        self, p1_name=None, p2_name='Computer', is_2p=False, debug=False
+    ):
         self.ship_sizes = self.size_ships()
         self.is_2p = is_2p
         self.players = self.setup_players(p1_name, p2_name, debug=debug)
         self._active_player = 0
 
     def setup_players(self, p1_name, p2_name, **kwargs):
-        return [Player(p1_name, self.ship_sizes, **kwargs),
-                Player(p2_name, self.ship_sizes,
-                       is_computer=not self.is_2p, **kwargs)]
+        return [
+            Player(p1_name, self.ship_sizes, **kwargs),
+            Player(
+                p2_name, self.ship_sizes, is_computer=not self.is_2p, **kwargs
+            )
+        ]
 
     # determine ship lengths
     def size_ships(self):
@@ -58,7 +61,7 @@ class Game(object):
 
     def fire_shot(self, guess_row, guess_col):
         result = self.opponent.board.fire_shot(guess_row, guess_col)
-        if result is 'retry':
+        if result == 'retry':
             return result
         if self.is_2p:
             self.switch_turns()
@@ -93,7 +96,7 @@ class Game(object):
             winner = self.player if opponent_done else self.opponent
             click.secho('{} wins!'.format(winner.name), fg='green')
         else:
-            status= self.opponent.board.is_finished
+            status = self.opponent.board.is_finished
             result = {True: 'won', False: 'lost'}[status]
             color = {True: 'green', False: 'red'}[status]
             click.secho(f'You {result}!', fg=color)
@@ -173,7 +176,7 @@ class BoardSet(object):
             result = {self.empty_cell: 'miss', self.ship_cell: 'hit'}[cell]
         else:
             message = 'You already guessed that one!'
-            result= 'retry'
+            result = 'retry'
         self.print_board(hide_ships=True, message=message)
         return result
 
@@ -192,8 +195,10 @@ class BoardSet(object):
     def player_build_ship(self, length):
         self.print_board()
         click.secho(f'This ship is {length} cells long.', fg='green')
-        orientation = click.prompt('Should it be horizontal (hor) or vertical (vert)?',
-                                   type=click.Choice(self.valid_orientations))
+        orientation = click.prompt(
+            'Should it be horizontal (hor) or vertical (vert)?',
+            type=click.Choice(self.valid_orientations)
+        )
         row_max, col_max = self.get_maxes(orientation, length)
         is_inserted = False
         while not is_inserted:
@@ -223,7 +228,9 @@ class BoardSet(object):
 
     def insert_ship(self, orientation, length, start_row, start_col):
         row_builder, col_builder = {
-            self.horizontal: (self._build_static_axis, self._build_dynamic_axis),
+            self.horizontal: (
+                self._build_static_axis, self._build_dynamic_axis
+            ),
             self.vertical: (self._build_dynamic_axis, self._build_static_axis)
         }[orientation]
         coords = list(zip(
@@ -255,8 +262,12 @@ def get_player_name(player_num):
 
 # begin game
 @click.command()
-@click.option('--number-of-players', '-n',
-             type=click.IntRange(1, 2), prompt="How many players?")
+@click.option(
+    '--number-of-players',
+    '-n',
+    type=click.IntRange(1, 2),
+    prompt="How many players?"
+)
 @click.option('--debug', is_flag=True)
 def start_game(number_of_players, debug):
     click.secho("Let's play Battleship!", fg='green')
@@ -267,4 +278,4 @@ def start_game(number_of_players, debug):
 
 
 if __name__ == "__main__":
-   start_game()
+    start_game()
