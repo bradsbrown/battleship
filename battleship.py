@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+from collections import namedtuple
+from enum import Enum, auto
 import random
 
 import click
@@ -20,6 +22,16 @@ NUM_SHIPS = 3
 NUM_TURNS = 10
 
 
+class Result(Enum):
+    RETRY = auto()
+    MISS = auto()
+    HIT = auto()
+
+
+ResultTuple = namedtuple('ResultTuple', ['result', 'message'])
+ResultTuple.__new__.__defaults__ = (None, '')
+
+
 class Game(object):
     def __init__(
         self, p1_name=None, p2_name='Computer', is_2p=False, debug=False
@@ -28,6 +40,7 @@ class Game(object):
         self.is_2p = is_2p
         self.players = self.setup_players(p1_name, p2_name, debug=debug)
         self._active_player = 0
+        self._last_result = ResultTuple(Result.MISS)
 
     def setup_players(self, p1_name, p2_name, **kwargs):
         return [
@@ -60,14 +73,15 @@ class Game(object):
         self._active_player = {0: 1, 1: 0}[self._active_player]
 
     def fire_shot(self, guess_row, guess_col):
-        result = self.opponent.board.fire_shot(guess_row, guess_col)
-        if result == 'retry':
-            return result
+        resulttuple = self.opponent.board.fire_shot(guess_row, guess_col)
+        if resulttuple.result is Result.RETRY:
+            return resulttuple
         if self.is_2p:
             self.switch_turns()
         else:
-            if result == 'miss':
+            if resulttuple.result is Result.MISS:
                 self.player.use_turn()
+        return resulttuple
 
     def play(self):
         self.setup()
@@ -81,13 +95,20 @@ class Game(object):
                 player.do_board_setup()
 
     def do_turn(self):
-        result = 'retry'
-        while result == 'retry':
+        self._last_result = ResultTuple(Result.RETRY, self._last_result.message)
+        while self._last_result.result is Result.RETRY:
             self.opponent.board.print_board(hide_ships=True)
+            if self._last_result.message:
+                click.echo(self._last_result.message)
+            if not self.is_2p:
+                click.echo(
+                    f'{self.player.name} has '
+                    f'{self.player.turns_remaining} turns remaining.'
+                )
             click.echo('Your turn, {}'.format(self.player.name))
             guess_col = get_valid_coordinate('col')
             guess_row = get_valid_coordinate('row')
-            result = self.fire_shot(guess_row, guess_col)
+            self._last_result = self.fire_shot(guess_row, guess_col)
 
     def end_game(self):
         click.secho('Game over!', bg='green', fg='red')
@@ -97,8 +118,10 @@ class Game(object):
             click.secho('{} wins!'.format(winner.name), fg='green')
         else:
             status = self.opponent.board.is_finished
-            result = {True: 'won', False: 'lost'}[status]
-            color = {True: 'green', False: 'red'}[status]
+            result, color = {
+                True: ('won', 'green'),
+                False: ('lost', 'red')
+            }[status]
             click.secho(f'You {result}!', fg=color)
         click.secho('Thanks for playing Battleship!', fg='blue')
 
@@ -111,7 +134,6 @@ class Player(object):
 
     def use_turn(self):
         self.turns_remaining -= 1
-        click.echo(f'{self.name} has {self.turns_remaining} turns remaining.')
 
     @property
     def out_of_turns(self):
@@ -173,15 +195,15 @@ class BoardSet(object):
                     self.ship_cell: self.hit_cell
                 }[cell]
             )
-            message = {
-                self.empty_cell: 'You missed!', self.ship_cell: 'A hit!'
+            resulttuple = {
+                self.empty_cell: ResultTuple(Result.MISS, 'You missed!'),
+                self.ship_cell: ResultTuple(Result.HIT, 'A hit!')
             }[cell]
-            result = {self.empty_cell: 'miss', self.ship_cell: 'hit'}[cell]
         else:
-            message = 'You already guessed that one!'
-            result = 'retry'
-        self.print_board(hide_ships=True, message=message)
-        return result
+            resulttuple = ResultTuple(
+                Result.RETRY, 'You already guessed that one!'
+            )
+        return resulttuple
 
     def mark_board(self, guess_row, guess_col, mark=None):
         mark = mark or self.miss_cell
