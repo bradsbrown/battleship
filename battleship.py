@@ -83,7 +83,7 @@ class Game(object):
     def do_turn(self):
         result = 'retry'
         while result == 'retry':
-            self.opponent.board.print_board()
+            self.opponent.board.print_board(hide_ships=True)
             click.echo('Your turn, {}'.format(self.player.name))
             guess_col = get_valid_coordinate('col')
             guess_row = get_valid_coordinate('row')
@@ -149,12 +149,15 @@ class BoardSet(object):
     def generate_board(self):
         return [[self.empty_cell] * self.size for _ in range(self.size)]
 
+    def _prep_row(self, row, hide_ships):
+        if self.debug or not hide_ships:
+            return row
+        return self._hide_ships(row)
+
     def print_board(self, hide_ships=False, message=''):
         click.clear()
-        hide_ships = hide_ships if not self.debug else False
         for row in self.ship_board:
-            row = self._hide_ships(row) if hide_ships else row
-            click.echo(' '.join(row))
+            click.echo(' '.join(self._prep_row(row, hide_ships)))
         if message:
             click.echo(message)
 
